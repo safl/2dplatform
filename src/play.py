@@ -238,7 +238,7 @@ def main():
                 if fullscreen:
                     screen = pygame.display.set_mode(
                         screen_dim,
-                        pygame.FULLSCREEN                        
+                        pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
                     )
                 else:
                     screen = pygame.display.set_mode( screen_dim )
