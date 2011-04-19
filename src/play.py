@@ -62,7 +62,7 @@ class Scene:
     
     def __init__(self, screen, dim, images):
         
-        self.width  = 100000
+        self.width  = 5000
         
         self.screen = screen
         self.images = images
@@ -74,10 +74,10 @@ class Scene:
     def move(self, distance):
         self.camera += int(distance)
         
-        if self.camera < 0:
+        if self.camera <= 0:
             self.camera = 0
-        elif self.camera > self.width-self.dim[0]-1:
-            self.camera = self.width - self.dim[0]-1
+        elif self.camera >= self.width - self.dim[0]:
+            self.camera = self.width - self.dim[0]
         
     def update(self, image, character, zpos=None):
         
@@ -265,15 +265,23 @@ def main():
             
         if not pressed[pygame.K_RIGHT] and not pressed[pygame.K_LEFT]:
             c.velocity_x = 0.0
-        
-        
-        # Move sonic or move the scene?
-        if (c.direction == dirs.E and c.x+87 >= (screen_w - s.border)) or \
-            (c.direction == dirs.W and c.x <= s.border):
-            
-            s.move(c.velocity_x)
-        else:
+                
+        # Move sonic or move the scene?        
+        if (c.direction == dirs.W and s.camera == 0) or \
+            (c.direction == dirs.E and s.camera >= s.width-screen_w):
             c.x += c.velocity_x
+        elif c.direction == dirs.E and c.x+44 < (screen_w/2):
+            c.x += c.velocity_x
+        elif c.direction == dirs.W and c.x+44 > (screen_w/2):
+            c.x += c.velocity_x
+        else:
+            s.move(c.velocity_x)
+        
+        # Keep sonic within the screen
+        if c.x <= 0:
+            c.x = 0
+        elif c.x >= screen_w-87:
+            c.x = screen_w-87
         
         c.y += c.velocity_y + w.gravity
         
