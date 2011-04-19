@@ -62,31 +62,53 @@ class Scene:
     
     def __init__(self, screen, dim, images):
         
-        self.width  = 3000
+        self.width  = 100000
         
         self.screen = screen
         self.images = images
         self.dim = dim
         
-        self.border = 200
+        self.border = dim[0]/2
         self.camera = 0
         
     def move(self, distance):
-        self.camera += distance
+        self.camera += int(distance)
         
         if self.camera < 0:
             self.camera = 0
         elif self.camera > self.width-self.dim[0]-1:
             self.camera = self.width - self.dim[0]-1
         
-    def update(self):
+    def update(self, image, character, zpos=None):
         
-        print self.camera
         screen_w, screen_h = self.dim
-        self.screen.blit(self.images[0], (0,0))
-        self.screen.blit(self.images[1].subsurface(self.camera/10,0, screen_w,  self.images[1].get_size()[1]), (0, screen_h-self.images[1].get_size()[1]))
-        self.screen.blit(self.images[2], (0,0))
-        self.screen.blit(self.images[3].subsurface(self.camera,0, screen_w,  self.images[3].get_size()[1]), (0, screen_h-self.images[3].get_size()[1]))
+        speeds = [math.pow(5, i) for i in reversed(xrange(0, len(self.images)))]
+        
+        print speeds
+        
+        if not zpos:                    # Default to top-level
+            zpos = len(self.images)-1
+        
+        for c, img in enumerate(self.images):
+        
+            w, h  = img.get_size()            
+            x_offset = self.camera/speeds[c]            
+                        
+            rect_offset = (x_offset % w)
+            rect_w      = min([(w - (x_offset % w)), screen_w])
+            rect_h      = h
+            
+            if c == zpos:
+                self.screen.blit(image, (character.x, character.y))
+            
+            self.screen.blit(
+                img.subsurface(rect_offset, 0, rect_w, rect_h),
+                (0, screen_h-h)
+            )
+            self.screen.blit(
+                img.subsurface(0, 0, screen_w-rect_w, rect_h),
+                (rect_w, screen_h-h)
+            )            
 
 class Character:
     
@@ -133,9 +155,6 @@ class Sprites:
                 )
             
             self._sprites.append( images )
-        
-        for i in self._sprites:
-            print len(i)
     
     def current(self):
         return self._sprites[self._current]
@@ -184,6 +203,7 @@ def main():
     
     images = sprites.current()
     ticks = 60
+    #ticks = 20
     
     w = World()
     w.ground = screen_h - back[3].get_size()[1]
@@ -224,8 +244,6 @@ def main():
                     screen = pygame.display.set_mode( screen_dim )
             elif event.type == pygame.KEYDOWN and event.key in [pygame.K_UP, pygame.K_DOWN, pygame.K_RIGHT, pygame.K_LEFT]:
                 pressed[event.key] = 1
-            
-        print pressed[pygame.K_LEFT], pressed[pygame.K_RIGHT], pressed[pygame.K_UP], pressed[pygame.K_DOWN]
         
         # Filter it
         if c.state != states.IN_AIR and pressed[pygame.K_UP] and not pressed[pygame.K_DOWN]:
@@ -290,8 +308,7 @@ def main():
         
         center_pos = (int((screen_w - image_w)/2), int((screen_h - image_h)/2))
         
-        s.update()
-        screen.blit(image, (c.x, c.y))
+        s.update(image, c, 3)
         
         pygame.display.update()
         clock.tick(ticks)
