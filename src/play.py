@@ -62,10 +62,11 @@ class Scene:
     
     def __init__(self, screen, dim, images):
         
-        self.width  = 5000
+        self.width  = 10000
         
         self.screen = screen
         self.images = images
+        self.speeds = [math.pow(5, i) for i in reversed(xrange(0, len(self.images)))]
         self.dim = dim
         
         self.border = dim[0]/2
@@ -81,18 +82,17 @@ class Scene:
         
     def update(self, image, character, zpos=None):
         
-        screen_w, screen_h = self.dim
-        speeds = [math.pow(5, i) for i in reversed(xrange(0, len(self.images)))]
-        
-        print speeds
+        screen_w, screen_h = self.dim        
         
         if not zpos:                    # Default to top-level
             zpos = len(self.images)-1
         
+        offsets = [(0,0), (0,0), (0,100), (0,0), (0,0), (0,-100)]
+        self.speeds = [10000, 1000, 100, 10 , 1, 0.5, 0.13]
         for c, img in enumerate(self.images):
         
             w, h  = img.get_size()            
-            x_offset = self.camera/speeds[c]            
+            x_offset = self.camera/self.speeds[c]            
                         
             rect_offset = (x_offset % w)
             rect_w      = min([(w - (x_offset % w)), screen_w])
@@ -103,11 +103,11 @@ class Scene:
             
             self.screen.blit(
                 img.subsurface(rect_offset, 0, rect_w, rect_h),
-                (0, screen_h-h)
+                (0, screen_h-h-offsets[c][1])   
             )
             self.screen.blit(
                 img.subsurface(0, 0, screen_w-rect_w, rect_h),
-                (rect_w, screen_h-h)
+                (rect_w, screen_h-h-offsets[c][1])
             )            
 
 class Character:
@@ -117,6 +117,7 @@ class Character:
         self.state      = states.STANDING
         self.direction  = dirs.E
         
+        self.amplifier      = 1.0
         self.velocity_x     = 18
         self.velocity_y     = 0
         self.jump_height    = 0
@@ -178,7 +179,7 @@ def draw(screen, dim, image):
 
 def main():
     
-    screen_dim = screen_w, screen_h = (1280, 768)
+    screen_dim = screen_w, screen_h = (1024, 768)
     
     running     = True
     fullscreen  = False
@@ -188,25 +189,24 @@ def main():
     pygame.mouse.set_visible(False)
     
     back = [
-        pygame.transform.scale(pygame.image.load('images/sky.png'), screen_dim),
-        pygame.image.load('images/mountains.png'),
-        pygame.image.load('images/trees.png'),
-        pygame.image.load('images/ground.png'),
+        pygame.transform.scale(pygame.image.load('images/bw_sky.png'), screen_dim),
+        pygame.image.load('images/bw_mountains.png'),
+        pygame.image.load('images/bw_trees.png'),
+        pygame.image.load('images/bw_tree.png'),
+        pygame.image.load('images/bw_ground.png'),
+        pygame.image.load('images/bw_tree.png'),
     ]
     s = Scene(screen, screen_dim, back)
     
-    ground = pygame.image.load('images/ground.png')
-    
-    
     sprites = Sprites()
-    sprites.load('sprites/sonic.png')
+    sprites.load('sprites/bw_sonic.png')
     
     images = sprites.current()
     ticks = 60
     #ticks = 20
     
     w = World()
-    w.ground = screen_h - back[3].get_size()[1]
+    w.ground = screen_h - 110
     
     c = Character()
     c.velocity_x = 0.0
@@ -246,15 +246,12 @@ def main():
                 pressed[event.key] = 1
         
         # Filter it
-        if c.state != states.IN_AIR and pressed[pygame.K_UP] and not pressed[pygame.K_DOWN]:
+        if c.state != states.IN_AIR and pressed[pygame.K_d]:
             c.velocity_y = -100.0
             
         if pressed[pygame.K_DOWN] and not pressed[pygame.K_UP]:
             c.direction = dirs.S
-            
-        if not pressed[pygame.K_DOWN] and not pressed[pygame.K_UP]:
-            pass
-                       
+        
         if pressed[pygame.K_LEFT] and not pressed[pygame.K_RIGHT]:
             c.direction     = dirs.W
             c.velocity_x    = -20.0
@@ -265,19 +262,25 @@ def main():
             
         if not pressed[pygame.K_RIGHT] and not pressed[pygame.K_LEFT]:
             c.velocity_x = 0.0
+            
+        if pressed[pygame.K_a]:
+            c.amplifier = 2.0
+        else:
+            c.amplifier = 1.0
+                
                 
         # Move sonic or move the scene?        
         if (c.direction == dirs.W and s.camera == 0) or \
             (c.direction == dirs.E and s.camera >= s.width-screen_w):
-            c.x += c.velocity_x
+            c.x += c.velocity_x * c.amplifier
         elif c.direction == dirs.E and c.x+44 < (screen_w/2):
-            c.x += c.velocity_x
+            c.x += c.velocity_x * c.amplifier
         elif c.direction == dirs.W and c.x+44 > (screen_w/2):
-            c.x += c.velocity_x
+            c.x += c.velocity_x * c.amplifier
         else:
-            s.move(c.velocity_x)
+            s.move(c.velocity_x * c.amplifier)
         
-        # Keep sonic within the screen
+        # Keep the Character within the screen
         if c.x <= 0:
             c.x = 0
         elif c.x >= screen_w-87:
